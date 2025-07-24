@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2023届同学去向地图</title>
+  <!-- 引入Leaflet和高德插件 -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://webapi.amap.com/maps?v=2.0&key=eabfc3094e04f1f9b7a686034fdfcc36"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    #map { width:100%; height:100vh; background:#f7f9fc; }
+    
+    /* 弹窗样式 */
+    .custom-popup { 
+      min-width:250px; 
+      font-family: "Microsoft YaHei", sans-serif; 
+      padding:12px;
+      border-radius:6px;
+      box-shadow:0 3px 10px rgba(0,0,0,0.2);
+    }
+    .custom-popup b { 
+      color:#2c3e50; 
+      font-size:16px;
+      display:block;
+      margin-bottom:5px;
+    }
+    .custom-popup .university { 
+      color:#e74c3c; 
+      font-weight:bold; 
+      margin:6px 0;
+    }
+    .custom-popup .province { 
+      color:#7f8c8d;
+      margin:3px 0;
+    }
+    .custom-popup .notes { 
+      background:#f8f9fa; 
+      padding:8px; 
+      border-radius:4px; 
+      margin-top:10px;
+      color:#3498db;
+      font-size:14px;
+      border-left:3px solid #3498db;
+    }
+    .custom-popup .phone {
+      margin-top:8px;
+      font-size:15px;
+    }
+    
+    /* 专业色标 */
+    .engineering { border-left:4px solid #ff9f43; }
+    .medical { border-left:4px solid #ee5253; }
+    .arts { border-left:4px solid #0abde3; }
+    
+    /* 筛选控件 */
+    .major-filter {
+      background:white;
+      padding:10px 15px;
+      border-radius:6px;
+      box-shadow:0 0 15px rgba(0,0,0,0.2);
+      margin-top:10px !important;
+    }
+    #major-select { 
+      padding:8px 12px;
+      border:1px solid #ddd;
+      border-radius:4px;
+      font-size:15px;
+    }
+    
+    /* 图标样式 */
+    .custom-icon {
+      width: 36px;
+      height: 36px;
+      background-size: 24px;
+      background-position: center;
+      background-repeat: no-repeat;
+      border-radius: 50%;
+      background-color: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      border:2px solid white;
+    }
+    .engineering-icon { 
+      background-color: #ff9f43;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M5,12V15H3V12H5M3,7V10H5V7H3M7,5H10V3H7V5M15,3V5H18V3H15M10,21H7V19H10V21M15,21V19H18V21H15M19,7V10H21V7H19M19,12V15H21V12H19M16,11H13V8H16V11M11,11H8V8H11V11M16,16H13V13H16V16M11,16H8V13H11V16M4,4A1,1 0 0,1 5,5V6A1,1 0 0,1 4,7H3A1,1 0 0,1 2,6V5A1,1 0 0,1 3,4H4M20,4A1,1 0 0,1 21,5V6A1,1 0 0,1 20,7H19A1,1 0 0,1 18,6V5A1,1 0 0,1 19,4H20M4,18A1,1 0 0,1 5,19V20A1,1 0 0,1 4,21H3A1,1 0 0,1 2,20V19A1,1 0 0,1 3,18H4M20,18A1,1 0 0,1 21,19V20A1,1 0 0,1 20,21H19A1,1 0 0,1 18,20V19A1,1 0 0,1 19,18H20Z'/%3E%3C/svg%3E");
+    }
+    .medical-icon { 
+      background-color: #ee5253;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M12,6L10,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8L12,6M14,16H10V14H7V10H10V8H14V10H17V14H14V16Z'/%3E%3C/svg%3E");
+    }
+    .arts-icon { 
+      background-color: #0abde3;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M5,3C3.89,3 3,3.89 3,5V19C3,20.11 3.89,21 5,21H19C20.11,21 21,20.11 21,19V5C21,3.89 20.11,3 19,3H5M5,5H19V19H5V5M7,7V9H9V7H7M11,7V9H13V7H11M15,7V9H17V7H15M7,11V13H9V11H7M11,11V13H13V11H11M15,11V13H17V11H15M7,15V17H9V15H7M11,15V17H13V15H11M15,15V17H17V15H15Z'/%3E%3C/svg%3E");
+    }
+    
+    /* 标题样式 */
+    .header {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: rgba(255,255,255,0.9);
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      font-family: "Microsoft YaHei", sans-serif;
+    }
+    .header h1 {
+      font-size: 20px;
+      color: #2c3e50;
+      margin-bottom: 5px;
+    }
+    .header p {
+      font-size: 14px;
+      color: #7f8c8d;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>2023届同学大学去向地图</h1>
+    <p>点击地图标记查看详细信息 | 右上角筛选专业类型</p>
+  </div>
+  <div id="map"></div>
+  
+  <script>
+     // 完整同学数据（50位同学）
+    const classmatesData = [
+      {name: "李安", university: "西南石油大学", province: "四川成都", major: "电气工程及其自动化", phone: "15779672681", notes: "", longitude: "104.185025", latitude: "30.826655"},
+      {name: "李博洋", university: "武汉理工大学", province: "湖北武汉", major: "机械类(智能制造)", phone: "18827809140", notes: "", longitude: "114.343923", latitude: "30.513791"},
+      {name: "李广文", university: "黑龙江工程学院", province: "黑龙江哈尔滨", major: "工程管理", phone: "", notes: "", longitude: "126.534731", latitude: "45.803775"},
+      {name: "李诗颖", university: "南昌航空大学", province: "江西南昌", major: "通信工程", phone: "18720460108", notes: "与刘佳慧、史宸玮、王玫、王熠凡同校", longitude: "115.892151", latitude: "28.676493"},
+      {name: "刘佳慧", university: "南昌航空大学", province: "江西南昌", major: "测控技术与仪器", phone: "15107965216", notes: "与李诗颖、史宸玮、王玫、王熠凡同校", longitude: "115.892151", latitude: "28.676493"},
+      {name: "刘俊明", university: "上海应用技术大学", province: "上海", major: "智能制造工程", phone: "17879610276", notes: "", longitude: "121.473701", latitude: "31.230416"},
+      {name: "刘妙灵", university: "大理大学", province: "云南大理", major: "视觉传达设计", phone: "19577863892", notes: "", longitude: "100.225668", latitude: "25.596899"},
+      {name: "刘思亮", university: "华东交通大学", province: "江西南昌", major: "机械电子工程", phone: "", notes: "与刘伟平同校", longitude: "115.882447", latitude: "28.717399"},
+      {name: "刘伟平", university: "华东交通大学", province: "江西南昌", major: "智能制造", phone: "18770969927", notes: "与刘思亮同校", longitude: "115.882447", latitude: "28.717399"},
+      {name: "刘伟强", university: "西南石油大学", province: "四川成都", major: "自动化", phone: "13517068095", notes: "", longitude: "104.185025", latitude: "30.826655"},
+      {name: "刘筱霞", university: "安徽理工大学", province: "安徽淮南", major: "智能科学与技术", phone: "19578463786", notes: "", longitude: "117.018639", latitude: "32.642812"},
+      {name: "刘子悦", university: "江西中医药大学", province: "江西南昌", major: "中医类", phone: "15279637398", notes: "", longitude: "115.892151", latitude: "28.676493"},
+      {name: "孟磊", university: "浙江理工大学", province: "浙江杭州", major: "生物科学类（生物技术，生物制药）", phone: "18879645386", notes: "与叶祉恒同校", longitude: "120.173599", latitude: "30.308978"},
+      {name: "欧阳昱", university: "赣南师范大学", province: "江西赣州", major: "电子科学与技术", phone: "18007066199", notes: "与王建灏同校", longitude: "114.935909", latitude: "25.845296"},
+      {name: "彭嘉锡", university: "井冈山大学", province: "江西吉安", major: "环境工程", phone: "19307968313", notes: "与周家瑜同校", longitude: "114.992043", latitude: "27.113847"},
+      {name: "彭子强", university: "西南交通大学", province: "四川成都", major: "土木工程", phone: "18179658986", notes: "", longitude: "103.952249", latitude: "30.761877"},
+      {name: "沙哲涵", university: "东华理工大学", province: "江西南昌", major: "核工程与核技术", phone: "15279658081", notes: "", longitude: "115.892151", latitude: "28.676493"},
+      {name: "史宸玮", university: "南昌航空大学", province: "江西南昌", major: "软件工程", phone: "18979655280", notes: "与李诗颖、刘佳慧、王玫、王熠凡同校", longitude: "115.892151", latitude: "28.676493"},
+      {name: "谭震", university: "齐鲁工业大学", province: "山东济南", major: "化工与制药类", phone: "19169742797", notes: "", longitude: "117.126399", latitude: "36.652833"},
+      {name: "王建灏", university: "赣南师范大学", province: "江西赣州", major: "师范类", phone: "19577865095", notes: "公费师范生；与欧阳昱同校", longitude: "114.935909", latitude: "25.845296"},
+      {name: "王可欣", university: "吉林大学", province: "吉林长春", major: "人力资源管理", phone: "18770693803", notes: "", longitude: "125.313642", latitude: "43.898338"},
+      {name: "王珑鑫", university: "桂林电子科技大学", province: "广西桂林", major: "物联网工程", phone: "19044646689", notes: "", longitude: "110.301003", latitude: "25.104078"},
+      {name: "王玫", university: "南昌航空大学", province: "江西南昌", major: "增材制造工程", phone: "18770645696", notes: "与李诗颖、刘佳慧、史宸玮、王熠凡同校", longitude: "115.892151", latitude: "28.676493"},
+      {name: "王宁", university: "天津中医药大学", province: "天津", major: "预防医学", phone: "157796564", notes: "", longitude: "117.202813", latitude: "39.124809"},
+      {name: "王心蕾", university: "中国传媒大学", province: "北京", major: "传播学", phone: "13207061229", notes: "", longitude: "116.562374", latitude: "39.918083"},
+      {name: "王一灵", university: "集美大学", province: "福建厦门", major: "工程管理", phone: "13697066985", notes: "", longitude: "118.103886", latitude: "24.575052"},
+      {name: "王熠凡", university: "南昌航空大学", province: "江西南昌", major: "增材制造工程", phone: "19507966803", notes: "与李诗颖、刘佳慧、史宸玮、王玫同校", longitude: "115.892151", latitude: "28.676493"},
+      {name: "王臻", university: "岭南师范学院", province: "广东湛江", major: "软件工程", phone: "18479636462", notes: "", longitude: "110.364977", latitude: "21.274898"},
+      {name: "王紫茜", university: "江西科技师范大学", province: "江西南昌", major: "计算机科学与技术", phone: "18307968921", notes: "", longitude: "115.892151", latitude: "28.676493"},
+      {name: "谢乐泽", university: "苏州科技大学", province: "江苏苏州", major: "工程管理", phone: "15779676695", notes: "", longitude: "120.585315", latitude: "31.298886"},
+      {name: "谢思远", university: "南昌大学", province: "江西南昌", major: "制药工程", phone: "19870671609", notes: "", longitude: "115.892151", latitude: "28.676493"},
+      {name: "熊越", university: "郑州大学", province: "河南郑州", major: "经济学类", phone: "18797961609", notes: "", longitude: "113.541082", latitude: "34.82207"},
+      {name: "肖子尚", university: "辽宁科技大学", province: "辽宁鞍山", major: "国际经济与贸易", phone: "19870623406", notes: "", longitude: "122.935637", latitude: "41.097102"},
+      {name: "肖瑜清", university: "重庆交通大学", province: "重庆", major: "城乡规划", phone: "18172777592", notes: "", longitude: "106.581515", latitude: "29.615467"},
+      {name: "徐浩然", university: "洛阳理工学院", province: "河南洛阳", major: "材料物理", phone: "18770646086", notes: "", longitude: "112.45429", latitude: "34.61939"},
+      {name: "杨立晨", university: "南昌医学院", province: "江西南昌", major: "口腔医学", phone: "19579951205", notes: "", longitude: "115.892151", latitude: "28.676493"},
+      {name: "叶祉恒", university: "浙江理工大学", province: "浙江杭州", major: "纺织类", phone: "17879692975", notes: "与孟磊同校", longitude: "120.173599", latitude: "30.308978"},
+      {name: "虞馨蓉", university: "武汉东湖学院", province: "湖北武汉", major: "新闻学", phone: "13097066659", notes: "", longitude: "114.343923", latitude: "30.513791"},
+      {name: "张赫俊", university: "北师香港浸会大学", province: "广东珠海", major: "计算机类(中外合作办学)", phone: "18870641304", notes: "北京师范大学-香港浸会大学联合国际学院", longitude: "113.549092", latitude: "22.126857"},
+      {name: "张璐", university: "成都理工大学", province: "四川成都", major: "油气储运工程", phone: "13138291142", notes: "", longitude: "104.185025", latitude: "30.826655"},
+      {name: "周东阳", university: "河南理工大学", province: "河南焦作", major: "应用物理学", phone: "18479634163", notes: "", longitude: "113.241823", latitude: "35.215892"},
+      {name: "周家瑜", university: "井冈山大学", province: "江西吉安", major: "会计学", phone: "17779687578", notes: "与彭嘉锡同校", longitude: "114.992043", latitude: "27.113847"},
+      {name: "周佳颖", university: "北京联合大学", province: "北京", major: "大数据管理与应用", phone: "13133681978", notes: "", longitude: "116.562374", latitude: "39.918083"},
+      {name: "周文洁", university: "江西农业大学", province: "江西南昌", major: "林学", phone: "18279629603", notes: "", longitude: "115.892151", latitude: "28.676493"},
+      {name: "朱彤欣", university: "浙江中医药大学", province: "浙江杭州", major: "中西医临床医学", phone: "15779185363", notes: "", longitude: "120.173599", latitude: "30.308978"},
+      {name: "朱逸涵", university: "南阳师范学院", province: "河南南阳", major: "物理（师范类）", phone: "13217961081", notes: "", longitude: "112.534501", latitude: "32.996562"},
+      {name: "左金隆", university: "江苏理工学院", province: "江苏常州", major: "应用化学", phone: "19870689381", notes: "", longitude: "119.977461", latitude: "31.815092"},
+      {name: "王紫茜", university: "江西科技师范大学", province: "江西南昌", major: "计算机科学与技术", phone: "18307968921", notes: "", longitude: "115.892151", latitude: "28.676493"},
+      {name: "刘媛媛", university: "锦州医科大学", province: "辽宁锦州", major: "临床医学", phone: "15879603916", notes: "", longitude: "121.147749", latitude: "41.130879"},
+      {name: "王捷", university: "井冈山大学", province: "井冈山", major: "临床医学", phone: "19169890485", notes: "", longitude: "114.992043", latitude: "27.113847"}
+    ];
+
+    // 1. 初始化地图
+    const map = L.map('map', {
+      center: [35.0, 105.0],
+      zoom: 5,
+      maxBounds: L.latLngBounds(L.latLng(15, 73), L.latLng(54, 136)), // 限制在中国范围
+      zoomControl: true
+    });
+
+    // 2. 加载高德中文地图
+    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+      subdomains: ['1','2','3','4'],
+      attribution: '&copy; <a href="https://ditu.amap.com/">高德地图</a>'
+    }).addTo(map);
+
+    // 3. 专业分类系统
+    const getMajorType = (major) => {
+      if (!major) return 'engineering';
+      if (/医学|临床|药学|口腔|护理|中医|预防医学|临床医学/.test(major)) return 'medical';
+      if (/设计|传播|新闻|经济|管理|会计|师范|教育|语言|人力资源/.test(major)) return 'arts';
+      return 'engineering'; // 默认工科
+    };
+    
+    // 4. 创建专业图标
+    const createMajorIcon = (type) => {
+      return L.divIcon({
+        html: '<div></div>',
+        className: `custom-icon ${type}-icon`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      });
+    };
+
+    // 5. 加载数据并生成标记
+    const markers = L.markerClusterGroup({
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      maxClusterRadius: 60,
+      spiderLegPolylineOptions: { weight: 1.5, color: '#222', opacity: 0.5 }
+    });
+
+    classmatesData.forEach(student => {
+      if (!student.latitude || !student.longitude) return;
+      
+      const majorType = getMajorType(student.major);
+      const marker = L.marker([parseFloat(student.latitude), parseFloat(student.longitude)], {
+        icon: createMajorIcon(majorType)
+      }).bindPopup(`
+        <div class="custom-popup ${majorType}">
+          <b>${student.name}</b>
+          <div>${student.major || '专业未填写'}</div>
+          <div class="university">${student.university}</div>
+          <div class="province">📍 ${student.province}</div>
+          ${student.phone ? `<div class="phone">📞 ${student.phone}</div>` : ''}
+          ${student.notes ? `<div class="notes">💬 ${student.notes}</div>` : ''}
+        </div>
+      `);
+      
+      markers.addLayer(marker);
+    });
+    
+    map.addLayer(markers);
+    
+    // 如果有有效标记，缩放到合适范围
+    if (markers.getLayers().length > 0) {
+      map.fitBounds(markers.getBounds(), { padding: [50, 50] });
+    } else {
+      map.setView([35.0, 105.0], 5); // 默认中国视图
+    }
+
+    // 6. 添加专业筛选控件
+    const majorFilter = L.control({ position: 'topright' });
+    majorFilter.onAdd = () => {
+      const div = L.DomUtil.create('div', 'major-filter');
+      div.innerHTML = `
+        <strong>专业筛选:</strong>
+        <select id="major-select">
+          <option value="all">所有专业</option>
+          <option value="engineering">工科类</option>
+          <option value="medical">医科类</option>
+          <option value="arts">文科类</option>
+        </select>
+      `;
+      return div;
+    };
+    majorFilter.addTo(map);
+
+    // 7. 专业筛选功能
+    document.getElementById('major-select').addEventListener('change', function(e) {
+      const type = e.target.value;
+      markers.getLayers().forEach(layer => {
+        const popupContent = layer.getPopup().getContent();
+        const isMatch = popupContent.includes(`custom-popup ${type}`);
+        layer.getElement().style.opacity = (type === 'all' || isMatch) ? 1 : 0.3;
+        layer.getElement().style.zIndex = (type === 'all' || isMatch) ? 1000 : 0;
+      });
+    });
+    
+    // 8. 添加地图比例尺
+    L.control.scale({ position: 'bottomleft', imperial: false }).addTo(map);
+  </script>
+</body>
+</html>
